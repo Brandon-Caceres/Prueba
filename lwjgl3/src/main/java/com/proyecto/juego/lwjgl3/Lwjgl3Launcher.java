@@ -29,7 +29,7 @@ public class Lwjgl3Launcher {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
         
         // --- Configuración de la Ventana ---
-        configuration.setTitle("BlockBreaker2024"); // Nombre del juego
+        configuration.setTitle("Cosmic Collision"); // Nombre del juego
         configuration.setWindowedMode(1280, 720); // Tamaño inicial de la ventana
         
         // Íconos de la ventana (se asume que los archivos están en el directorio de recursos de lwjgl3)

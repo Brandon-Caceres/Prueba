@@ -321,7 +321,7 @@ public class Main extends ApplicationAdapter {
         float anchoMundo = camara.viewportWidth;
         float altoMundo = camara.viewportHeight;
 
-        String titulo = "BLOCKBREAKER 2024";
+        String titulo = "COSMIC COLLISION";
         String subtitulo = "Elige dificultad:";
         String opt1 = "1 (F1) - FÁCIL   | Paleta grande, bola lenta";
         String opt2 = "2 (F2) - MEDIA   | Más bloques, duros";
