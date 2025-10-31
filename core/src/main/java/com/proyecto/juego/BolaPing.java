@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 
-// Todo esta bien
 public class BolaPing extends ObjetoJuego {
     private int radio;
     private int velX;

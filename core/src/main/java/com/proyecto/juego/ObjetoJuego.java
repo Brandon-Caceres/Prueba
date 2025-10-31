@@ -1,9 +1,8 @@
 package com.proyecto.juego;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-
-// Ayua
 public abstract class ObjetoJuego {
     protected int x;
     protected int y;
@@ -27,5 +26,6 @@ public abstract class ObjetoJuego {
 
     public void actualizar() {}
 
-    public abstract void dibujar(ShapeRenderer sr);
+    public void dibujar(ShapeRenderer sr) {}
+    public void dibujar(SpriteBatch batch) {}
 }

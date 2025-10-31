@@ -11,8 +11,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.graphics.Texture;
-
 
 public class Main extends ApplicationAdapter {
 
@@ -20,7 +18,7 @@ public class Main extends ApplicationAdapter {
     private enum EstadoJuego { MENU, JUGANDO, PAUSADO, TUTORIAL, FIN_DE_JUEGO, CREDITOS }
 
     private OrthographicCamera camara;
-    private SpriteBatch loteSprites; // SpriteBatch
+    private SpriteBatch loteSprites;
     private BitmapFont fuente;
     private ShapeRenderer renderizadorFormas;
     private GlyphLayout diseñoGlifo;
