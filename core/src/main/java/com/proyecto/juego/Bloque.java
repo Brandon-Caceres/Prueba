@@ -1,31 +1,43 @@
 package com.proyecto.juego;
 
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
+
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import java.util.Random;
 
 public class Bloque extends ObjetoJuego implements Colisionable {
-    private Color colorBase;
     private boolean destruido;
     private boolean irrompible;
     private int hp;
+    
+    private Texture texturaNormal;
+    private Texture texturaResistente2;
+    private Texture texturaResistente3;
+    private Texture texturaIrrompible;
 
-    public Bloque(int x, int y, int ancho, int alto) {
-        this(x, y, ancho, alto, 1, false);
+    public Bloque(int x, int y, int ancho, int alto, Texture tx1, Texture tx2, Texture tx3, Texture txU) {
+        this(x, y, ancho, alto, 1, false, tx1, tx2, tx3, txU);
     }
-
-    public Bloque(int x, int y, int ancho, int alto, int hp, boolean irrompible) {
+    
+    public Bloque(int x, int y, int ancho, int alto, int hp, boolean irrompible, Texture tx1, Texture tx2, Texture tx3, Texture txU) {
         super(x, y, ancho, alto);
         this.irrompible = irrompible;
         this.hp = Math.max(1, hp);
         this.destruido = false;
-
-        Random r = new Random(x + y);
-        this.colorBase = new Color(0.15f + (r.nextFloat() * 0.8f), r.nextFloat(), r.nextFloat(), 1.0f);
+        
+        this.texturaNormal = tx1;
+        this.texturaResistente2 = tx2;
+        this.texturaResistente3 = tx3;
+        this.texturaIrrompible = txU;
     }
-
+    
     @Override
     public Rectangle getRect() {
         return new Rectangle(x, y, ancho, alto);
@@ -54,17 +66,24 @@ public class Bloque extends ObjetoJuego implements Colisionable {
         }
     }
 
-    @Override
-    public void dibujar(ShapeRenderer sr) {
-        if (destruido) return;
+    public void dibujar(SpriteBatch batch) { 
+        Texture texturaActual = null;
+        
         if (irrompible) {
-            sr.setColor(Color.DARK_GRAY);
-        } else if (hp >= 2) {
-            float f = Math.max(0.45f, 1.0f - 0.18f * (hp - 1));
-            sr.setColor(colorBase.r * f, colorBase.g * f, colorBase.b * f, 1f);
-        } else {
-            sr.setColor(colorBase);
+            texturaActual = texturaIrrompible;
+        } 
+        else {
+            if (hp == 3) {
+                texturaActual = texturaResistente3;
+            } else if (hp == 2) {
+                texturaActual = texturaResistente2;
+            } else {
+                texturaActual = texturaNormal; 
+            }
         }
-        sr.rect(x, y, ancho, alto);
+        
+        if (texturaActual != null) {
+            batch.draw(texturaActual, x, y, ancho, alto);
+        }
     }
 }

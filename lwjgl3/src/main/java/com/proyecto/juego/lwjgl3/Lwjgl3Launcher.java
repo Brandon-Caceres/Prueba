@@ -2,43 +2,48 @@ package com.proyecto.juego.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.proyecto.juego.Main;
+import com.proyecto.juego.Main; // Asume que la clase principal del juego se llama Main
 
-/** Launches the desktop (LWJGL3) application. */
+/** Lanza la aplicación de escritorio (LWJGL3). */
 public class Lwjgl3Launcher {
     public static void main(String[] args) {
-        if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
+        // Esta línea es útil para la compatibilidad con macOS y Windows.
+        if (StartupHelper.startNewJvmIfRequired()) return;
         createApplication();
     }
 
+    /**
+     * Crea y devuelve la aplicación LibGDX.
+     * @return Una nueva instancia de Lwjgl3Application.
+     */
     private static Lwjgl3Application createApplication() {
+        // Utiliza la clase principal del juego (Main) y la configuración por defecto.
         return new Lwjgl3Application(new Main(), getDefaultConfiguration());
     }
 
+    /**
+     * Define y devuelve la configuración por defecto para la aplicación de escritorio.
+     * @return La configuración de la aplicación Lwjgl3.
+     */
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        configuration.setTitle("ProyectoJuego");
-        //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
-        //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
-        configuration.useVsync(true);
-        //// Limits FPS to the refresh rate of the currently active monitor, plus 1 to try to match fractional
-        //// refresh rates. The Vsync setting above should limit the actual FPS to match the monitor.
-        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
-        //// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
-        //// useful for testing performance, but can also be very stressful to some hardware.
-        //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
-
-        configuration.setWindowedMode(1280, 768);
-        //// You can change these files; they are in lwjgl3/src/main/resources/ .
-        //// They can also be loaded from the root of assets/ .
+        
+        // --- Configuración de la Ventana ---
+        configuration.setTitle("BlockBreaker2024"); // Nombre del juego
+        configuration.setWindowedMode(1280, 720); // Tamaño inicial de la ventana
+        
+        // Íconos de la ventana (se asume que los archivos están en el directorio de recursos de lwjgl3)
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
 
-        //// This should improve compatibility with Windows machines with buggy OpenGL drivers, Macs
-        //// with Apple Silicon that have to emulate compatibility with OpenGL anyway, and more.
-        //// This uses the dependency `com.badlogicgames.gdx:gdx-lwjgl3-angle` to function.
-        //// You can choose to remove the following line and the mentioned dependency if you want; they
-        //// are not intended for games that use GL30 (which is compatibility with OpenGL ES 3.0).
-        configuration.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.ANGLE_GLES20, 0, 0);
+        // --- Configuración de Renderizado y FPS ---
+        
+        // Vsync limita los FPS a la tasa de refresco del monitor, ayudando a eliminar el 'screen tearing'.
+        configuration.useVsync(true);
+        
+        // Limita los FPS a la tasa de refresco del monitor activo + 1 (como salvaguarda).
+        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
+        
+        // NOTA: Si se desactiva Vsync y ForegroundFPS, se obtienen FPS ilimitados.
 
         return configuration;
     }

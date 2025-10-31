@@ -11,490 +11,761 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.Texture;
+
 
 public class Main extends ApplicationAdapter {
 
-    private enum Estado { MENU, JUGANDO, PAUSADO }
+	// POSIBLES ESTADOS DEL JUEGO
+    private enum EstadoJuego { MENU, JUGANDO, PAUSADO, TUTORIAL, FIN_DE_JUEGO, CREDITOS }
 
-    private OrthographicCamera cam;
-    private SpriteBatch batch;
+    private OrthographicCamera camara;
+    private SpriteBatch loteSprites; // SpriteBatch
     private BitmapFont fuente;
-    private ShapeRenderer sr;
-    private GlyphLayout gl;
+    private ShapeRenderer renderizadorFormas;
+    private GlyphLayout diseñoGlifo;
+    
+    // TEXTURAS
+    private com.badlogic.gdx.graphics.Texture texturaFondo;
+    private com.badlogic.gdx.graphics.Texture texturaPaleta;
+    private com.badlogic.gdx.graphics.Texture texturaAsteroideNormal; 
+    private com.badlogic.gdx.graphics.Texture texturaAsteroideDuro2;
+    private com.badlogic.gdx.graphics.Texture texturaAsteroideDuro3; 
+    private com.badlogic.gdx.graphics.Texture texturaAsteroideIrrompible;
+    
+    // PARA LA NOTIFICACIÓN DE BONIFICACIÓN DE VIDA
+    private long mostrarBonificacionVidaHastaMs = 0;
+    private final long duracionBonificacionVida = 1500;
 
-    private BolaPing bola;
-    private Plataforma plat;
-    private ArrayList<Bloque> bloques = new ArrayList<>();
+    // PARA EL TUTORIAL
+    private final int MAX_PAGINAS_TUTORIAL = 3; 
+    private int paginaTutorialActual = 1;
+    
+    // PARA LOS CRÉDITOS (DESPLAZAMIENTO)
+    private String textoCreditos;
+    private float desplazamientoCreditosY;
+    private float velocidadDesplazamientoCreditos = 70f; 
+    private float lineaFinCreditos;
+    
+    private BolaPing pelota; 
+    private Plataforma paleta;   
+    private ArrayList<Bloque> bloques = new ArrayList<>(); 
 
     private int vidas;
-    private int puntos;
+    private int puntaje;
     private int nivel;
 
-    private Estado estado = Estado.MENU;
-    private Dificultad dificultad = Dificultad.FACIL;
+    // ESTADO INICIAL
+    private EstadoJuego estado = EstadoJuego.MENU;
+    private Dificultad dificultad = Dificultad.FACIL; 
 
-    // Parámetros por dificultad
+    // PARÁMETROS DE DIFICULTAD
     private int filasBase = 3;
-    private int filasPorNivel = 0;
-    private int anchoPlatBase = 120;
-    private int velBolaX = 5;
-    private int velBolaY = 7;
-    private float velPlat = 200f;
+    private int incrementoFilasPorNivel = 0;
+    private int anchoBasePaleta = 120;
+    private int velocidadXPelotaActual = 5;
+    private int velocidadYPelotaActual = 7;
+    private float velocidadPaleta = 200f;
 
-    // Bloques
-    private int anchoBloq = 70;
-    private int altoBloq = 26;
-    private int espH = 10;
-    private int espV = 10;
-    private int margenLR = 10;
-    private int margenTop = 10;
+    // VALORES PREDETERMINADOS DEL TAMAÑO DEL BLOQUE (MEDIO/DIFÍCIL)
+    private int anchoBloque = 70;
+    private int altoBloque = 26;
+    private int espaciadoHBloque = 10;
+    private int espaciadoVBloque = 10;
+    private int margenBloqueLR = 10;
+    private int margenSuperiorBloque = 10;
 
-    private int colsObjetivoFacil = 8;
+    private int columnasObjetivoFacil = 8;
 
-    private float tasaDuros = 0f;
+    // TIPO DE BLOQUE
+    private float tasaBloquesDuros = 0f;
     private float tasaIrrompibles = 0f;
     private boolean permitirIrrompibles = false;
 
-    // pausa/menu
-    private final String[] opcionesPausa = { "Reanudar", "Reiniciar nivel", "Menu principal", "Salir" };
-    private int selPausa = 0;
-    private boolean acabaDeEntrarPausa = false;
-    private long ultTogglePausaMs = 0;
+    // PARA EL MENÚ DE PAUSA
+    private final String[] opcionesPausa = { "Reanudar", "Reiniciar Nivel", "Menú Principal", "Salir" };
+    private int opcionPausaSeleccionada = 0;
+    private boolean recienEntradoEnPausa = false;
+    private long ultimoCambioPausaMs = 0;
 
     @Override
     public void create () {
-        cam = new OrthographicCamera();
-        cam.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        cam.update();
+        camara = new OrthographicCamera();
+        camara.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        camara.update();
 
-        batch = new SpriteBatch();
+        loteSprites = new SpriteBatch();
         fuente = new BitmapFont();
         fuente.getData().setScale(2.0f, 2.0f);
-        sr = new ShapeRenderer();
-        gl = new GlyphLayout();
+        renderizadorFormas = new ShapeRenderer();
+        diseñoGlifo = new GlyphLayout();
 
-        estado = Estado.MENU;
-        dificultad = Dificultad.FACIL;
-        puntos = 0;
+        // AQUI CARGO LAS TEXTURAS BRANDON, NOSE SI TA BIEN JSJSJSJ
+        texturaFondo = new com.badlogic.gdx.graphics.Texture(Gdx.files.internal("espacio.jpg"));
+        texturaPaleta = new com.badlogic.gdx.graphics.Texture(Gdx.files.internal("nave.png"));
+        texturaAsteroideNormal = new com.badlogic.gdx.graphics.Texture(Gdx.files.internal("AsteroideE.png"));
+        texturaAsteroideDuro2 = new com.badlogic.gdx.graphics.Texture(Gdx.files.internal("AsteroideM.png"));
+        texturaAsteroideDuro3 = new com.badlogic.gdx.graphics.Texture(Gdx.files.internal("AsteroideH.png"));
+        texturaAsteroideIrrompible = new com.badlogic.gdx.graphics.Texture(Gdx.files.internal("AsteroideI.png"));
+        
+        estado = EstadoJuego.MENU;
+        dificultad = Dificultad.FACIL; 
+        puntaje = 0;
         vidas = 3;
         nivel = 1;
         bloques.clear();
+        
+        // TEXTO CRÉDITOS
+        StringBuilder sb = new StringBuilder();
+        sb.append("LOS DEL MOLINOGEA EN ADA PRESENTAN:\n\n");
+        sb.append("BLOCKBREAKER - NUESTRA VERSIÓN\n\n");
+        sb.append("------------------------------------------\n\n");
+        sb.append("EQUIPO DE PROGRAMACIÓN:\n");
+        sb.append("  BRANDON CÁCERES\n");
+        sb.append("  JOSUÉ HUAIQUIL\n");
+        sb.append("  IGNACIO MUÑOZ\n\n");
+        sb.append("DISEÑADOR:\n");
+        sb.append("  JOSUÉ HUAIQUIL\n\n");
+        sb.append("ESCRITOR:\n");
+        sb.append("  IGNACIO MUÑOZ\n\n");
+        sb.append("LENGUAJE USADO:\n");
+        sb.append("  JAVA\n\n");
+        sb.append("HERRAMIENTAS USADAS:\n");
+        sb.append("  ECLIPSE\n");
+        sb.append("  LIBGDX\n");
+        sb.append("  GITHUB\n");
+        sb.append("  CHATGPT\n");
+        sb.append("  GEMINI\n\n");
+        sb.append("------------------------------------------\n\n");
+        sb.append("¡GRACIAS POR JUGAR!");
+        
+        textoCreditos = sb.toString();
+        
+        reiniciarPosicionCreditos();
     }
 
-    private boolean puedeTogglePausa() {
+    // MÉTODO PARA REINICIAR LA POSICIÓN DE LOS CRÉDITOS
+    private void reiniciarPosicionCreditos() {
+        fuente.getData().setScale(2.0f); 
+        diseñoGlifo.setText(fuente, textoCreditos);
+        float altoTexto = diseñoGlifo.height;
+        
+        desplazamientoCreditosY = -altoTexto - 50; 
+        
+        lineaFinCreditos = camara.viewportHeight + 50f;
+    }
+    
+    // MÉTODO PARA LIMITAR LA VELOCIDAD AL PAUSAR EL JUEGO (Debounce)
+    private boolean puedeCambiarPausa() {
         long ahora = com.badlogic.gdx.utils.TimeUtils.millis();
-        if (ahora - ultTogglePausaMs < 200) return false;
-        ultTogglePausaMs = ahora;
+        if (ahora - ultimoCambioPausaMs < 200) return false;
+        ultimoCambioPausaMs = ahora;
         return true;
     }
 
+    // MÉTODO PARA APLICAR LA DIFICULTAD
     private void aplicarDificultad(Dificultad d) {
         dificultad = d;
         switch (d) {
-            case FACIL:
-                anchoPlatBase = 160;
-                velBolaX = 2;
-                velBolaY = 3;
+            case FACIL: 
+                anchoBasePaleta = 160;
+                velocidadXPelotaActual = 2;
+                velocidadYPelotaActual = 3;
                 filasBase = 3;
-                filasPorNivel = 0;
-                velPlat = 700f;
+                incrementoFilasPorNivel = 0;
+                velocidadPaleta = 700f;
 
-                colsObjetivoFacil = 8;
-                espH = 16;
-                espV = 14;
-                margenLR = 20;
-                margenTop = 20;
+                columnasObjetivoFacil = 8;
+                espaciadoHBloque = 16;
+                espaciadoVBloque = 14;
+                margenBloqueLR = 20;
+                margenSuperiorBloque = 20;
 
-                tasaDuros = 0.0f;
+                tasaBloquesDuros = 0.0f;
                 tasaIrrompibles = 0.0f;
                 permitirIrrompibles = false;
                 break;
 
-            case MEDIA:
-                anchoPlatBase = 110;
-                velBolaX = 4;
-                velBolaY = 5;
+            case MEDIA: 
+                anchoBasePaleta = 110;
+                velocidadXPelotaActual = 4;
+                velocidadYPelotaActual = 5;
                 filasBase = 5;
-                filasPorNivel = 1;
-                velPlat = 1000f;
+                incrementoFilasPorNivel = 1;
+                velocidadPaleta = 1000f;
 
-                anchoBloq = 70;
-                altoBloq = 26;
-                espH = 10;
-                espV = 10;
-                margenLR = 10;
-                margenTop = 10;
+                anchoBloque = 70;
+                altoBloque = 26;
+                espaciadoHBloque = 10;
+                espaciadoVBloque = 10;
+                margenBloqueLR = 10;
+                margenSuperiorBloque = 10;
 
-                tasaDuros = 0.25f;
+                tasaBloquesDuros = 0.25f;
                 tasaIrrompibles = 0.0f;
                 permitirIrrompibles = false;
                 break;
 
-            case DIFICIL:
-                anchoPlatBase = 90;
-                velBolaX = 5;
-                velBolaY = 6;
+            case DIFICIL: 
+                anchoBasePaleta = 90;
+                velocidadXPelotaActual = 5;
+                velocidadYPelotaActual = 6;
                 filasBase = 7;
-                filasPorNivel = 2;
-                velPlat = 1500f;
+                incrementoFilasPorNivel = 2;
+                velocidadPaleta = 1500f;
 
-                anchoBloq = 70;
-                altoBloq = 26;
-                espH = 10;
-                espV = 10;
-                margenLR = 10;
-                margenTop = 10;
+                anchoBloque = 70;
+                altoBloque = 26;
+                espaciadoHBloque = 10;
+                espaciadoVBloque = 10;
+                margenBloqueLR = 10;
+                margenSuperiorBloque = 10;
 
-                tasaDuros = 0.40f;
+                tasaBloquesDuros = 0.40f;
                 tasaIrrompibles = 0.15f;
                 permitirIrrompibles = true;
                 break;
         }
     }
 
+    // MÉTODO PARA INICIAR EL JUEGO
     private void iniciarJuego() {
-        puntos = 0;
+        puntaje = 0;
         vidas = 3;
         nivel = 1;
 
-        plat = new Plataforma((int)(cam.viewportWidth/2f - anchoPlatBase/2f), 40, anchoPlatBase, 10);
-        plat.setVelPxPorSeg(velPlat);
+        paleta = new Plataforma((int)(camara.viewportWidth/2f - anchoBasePaleta/2f), 40, anchoBasePaleta, 40, texturaPaleta);
+        paleta.setVelPxPorSeg(velocidadPaleta);
 
-        bola = new BolaPing(
-            (int)(cam.viewportWidth/2f - 10),
-            plat.getY() + plat.getAlto() + 11,
-            10,
-            velBolaX,
-            velBolaY,
-            true
-        );
-
-        crearBloques(calcularFilasNivel(nivel));
+        pelota = new BolaPing((int)(camara.viewportWidth/2f - 10), paleta.getY() + paleta.getAlto() + 11, 10,
+        					  velocidadXPelotaActual, velocidadYPelotaActual, true);
+        crearBloques(filasParaNivel(nivel));
+        estado = EstadoJuego.JUGANDO; 
     }
 
-    private int calcularFilasNivel(int n) {
-        return filasBase + Math.max(0, (n - 1) * filasPorNivel);
+    // MÉTODO PARA CALCULAR LA CANTIDAD DE FILAS DE BLOQUES
+    private int filasParaNivel(int nivelActual) {
+        return filasBase + Math.max(0, (nivelActual - 1) * incrementoFilasPorNivel);
     }
 
+    // MÉTODO PARA CREAR LOS BLOQUES
     public void crearBloques(int filas) {
         bloques.clear();
-        int y = (int)cam.viewportHeight - margenTop;
+        int y = (int)camara.viewportHeight - margenSuperiorBloque; 
+
+        com.badlogic.gdx.graphics.Texture txN = texturaAsteroideNormal;
+        com.badlogic.gdx.graphics.Texture tx2 = texturaAsteroideDuro2;
+        com.badlogic.gdx.graphics.Texture tx3 = texturaAsteroideDuro3;
+        com.badlogic.gdx.graphics.Texture txU = texturaAsteroideIrrompible;
 
         if (dificultad == Dificultad.FACIL) {
-            int cols = Math.max(3, colsObjetivoFacil);
-            float w = cam.viewportWidth;
+            int cols = Math.max(3, columnasObjetivoFacil);
+            float anchoMundo = camara.viewportWidth;
 
-            float disponibleW = w - (2 * margenLR) - (espH * (cols - 1));
-            int bw = Math.max(40, (int)(disponibleW / cols));
-            int bh = Math.max(26, (int)(bw * 0.38f));
+            float anchoDisponible = anchoMundo - (2 * margenBloqueLR) - (espaciadoHBloque * (cols - 1));
+            int anchoB = Math.max(40, (int)(anchoDisponible / cols));
+            int altoB = Math.max(26, (int)(anchoB * 0.38f));
 
-            for (int f = 0; f < filas; f++) {
-                y -= (bh + espV);
+            for (int fila = 0; fila < filas; fila++) {
+                y -= (altoB + espaciadoVBloque);
                 if (y < 0) break;
 
-                float anchoFila = cols * bw + (cols - 1) * espH;
-                int startX = (int)Math.round((w - anchoFila) / 2f);
+                float anchoFila = cols * anchoB + (cols - 1) * espaciadoHBloque;
+                int inicioX = (int)Math.round((anchoMundo - anchoFila) / 2f);
 
                 for (int c = 0; c < cols; c++) {
-                    int x = startX + c * (bw + espH);
-                    bloques.add(new Bloque(x, y, bw, bh));
+                    int x = inicioX + c * (anchoB + espaciadoHBloque);
+                   
+                    bloques.add(new Bloque(x, y, anchoB, altoB, txN, tx2, tx3, txU)); 
                 }
             }
-        } else {
-            int bw = anchoBloq;
-            int bh = altoBloq;
-            float w = cam.viewportWidth;
+        } else { 
+            int anchoB = anchoBloque;
+            int altoB = altoBloque;
+            float anchoMundo = camara.viewportWidth;
 
-            float disponibleW = w - (2 * margenLR);
-            int cols = Math.max(1, (int)Math.floor((disponibleW + espH) / (bw + espH)));
-            float anchoFila = cols * bw + (cols - 1) * espH;
-            int startX = Math.max(margenLR, (int)Math.round((w - anchoFila) / 2f));
+            float anchoDisponible = anchoMundo - (2 * margenBloqueLR);
+            int cols = Math.max(1, (int)Math.floor((anchoDisponible + espaciadoHBloque) / (anchoB + espaciadoHBloque)));
+            float anchoFila = cols * anchoB + (cols - 1) * espaciadoHBloque;
+            int inicioX = Math.max(margenBloqueLR, (int)Math.round((anchoMundo - anchoFila) / 2f));
 
-            for (int f = 0; f < filas; f++) {
-                y -= (bh + espV);
+            for (int fila = 0; fila < filas; fila++) {
+                y -= (altoB + espaciadoVBloque);
                 if (y < 0) break;
 
                 for (int c = 0; c < cols; c++) {
-                    int x = startX + c * (bw + espH);
+                    int x = inicioX + c * (anchoB + espaciadoHBloque);
+                    
+                    // LOGICA DEL TIPO DE ASTEROIDE
+                    boolean hacerIrrompible = permitirIrrompibles && Math.random() < tasaIrrompibles;
+                    boolean hacerDuro = !hacerIrrompible && Math.random() < tasaBloquesDuros;
+                    
+                    if (hacerIrrompible) {
+                        bloques.add(new Bloque(x, y, anchoB, altoB, 1, true, txN, tx2, tx3, txU));
+                    } else if (hacerDuro) {
 
-                    boolean mkIrromp = permitirIrrompibles && Math.random() < tasaIrrompibles;
-                    boolean mkDuro = !mkIrromp && Math.random() < tasaDuros;
-
-                    if (mkIrromp) {
-                        bloques.add(new Bloque(x, y, bw, bh, 1, true));
-                    } else if (mkDuro) {
-                        int hp = (dificultad == Dificultad.DIFICIL)
-                                ? (Math.random() < 0.5 ? 3 : 2)
-                                : 2;
-                        bloques.add(new Bloque(x, y, bw, bh, hp, false));
+                        int hp = (dificultad == Dificultad.DIFICIL) ? (Math.random() < 0.5 ? 3 : 2) : 2; 
+                        bloques.add(new Bloque(x, y, anchoB, altoB, hp, false, txN, tx2, tx3, txU)); 
                     } else {
-                        bloques.add(new Bloque(x, y, bw, bh));
+                        bloques.add(new Bloque(x, y, anchoB, altoB, txN, tx2, tx3, txU)); 
                     }
                 }
-            }
+            } 
         }
     }
 
+    // MÉTODO PARA DIBUJAR EL MENÚ
     private void dibujarMenu() {
-        cam.update();
-        batch.setProjectionMatrix(cam.combined);
-        batch.begin();
+        camara.update();
+        loteSprites.setProjectionMatrix(camara.combined);
+        loteSprites.begin();
 
-        float w = cam.viewportWidth;
-        float h = cam.viewportHeight;
+        float anchoMundo = camara.viewportWidth;
+        float altoMundo = camara.viewportHeight;
 
-        String titulo = "ROMPEBLOQUES 2024";
-        String sub = "Elige dificultad:";
-        String o1 = "1 (F1) - FACIL   | Paleta grande, bola lenta";
-        String o2 = "2 (F2) - MEDIA   | Mas bloques, duros";
-        String o3 = "3 (F3) - DIFICIL | Mas bloques, duros e irrompibles";
-        String cont = "Controles: LEFT/RIGHT, SPACE lanzar, ESC pausa";
+        String titulo = "BLOCKBREAKER 2024";
+        String subtitulo = "Elige dificultad:";
+        String opt1 = "1 (F1) - FÁCIL   | Paleta grande, bola lenta";
+        String opt2 = "2 (F2) - MEDIA   | Más bloques, duros";
+        String opt3 = "3 (F3) - DIFÍCIL | Más bloques, duros e irrompibles";
+        String opt4 = "4 (F4) - TUTORIAL | Ver controles e instrucciones";
+        String opt5 = "5 (F5) - CRÉDITOS | Ver información del desarrollo";
+        String controles = "Controles: IZQ/DER, ESPACIO lanzar, ESC pausa";
 
-        float y = h - 60;
-        float linea = 48f;
+        float y = altoMundo - 60;
+        float interlineado = 48f;
 
-        gl.setText(fuente, titulo);
-        fuente.draw(batch, titulo, (w - gl.width) / 2f, y);
-        y -= linea * 1.2f;
+        diseñoGlifo.setText(fuente, titulo);
+        fuente.draw(loteSprites, titulo, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado * 1.2f;
 
-        gl.setText(fuente, sub);
-        fuente.draw(batch, sub, (w - gl.width) / 2f, y);
-        y -= linea;
+        diseñoGlifo.setText(fuente, subtitulo);
+        fuente.draw(loteSprites, subtitulo, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado;
 
-        gl.setText(fuente, o1);
-        fuente.draw(batch, o1, (w - gl.width) / 2f, y);
-        y -= linea;
+        diseñoGlifo.setText(fuente, opt1);
+        fuente.draw(loteSprites, opt1, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado;
 
-        gl.setText(fuente, o2);
-        fuente.draw(batch, o2, (w - gl.width) / 2f, y);
-        y -= linea;
+        diseñoGlifo.setText(fuente, opt2);
+        fuente.draw(loteSprites, opt2, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado;
 
-        gl.setText(fuente, o3);
-        fuente.draw(batch, o3, (w - gl.width) / 2f, y);
-        y -= linea * 1.5f;
+        diseñoGlifo.setText(fuente, opt3);
+        fuente.draw(loteSprites, opt3, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado;
+        
+        diseñoGlifo.setText(fuente, opt4);
+        fuente.draw(loteSprites, opt4, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado;
+        
+        diseñoGlifo.setText(fuente, opt5);
+        fuente.draw(loteSprites, opt5, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= interlineado * 1.5f;
 
-        gl.setText(fuente, cont);
-        fuente.draw(batch, cont, (w - gl.width) / 2f, 80);
+        diseñoGlifo.setText(fuente, controles);
+        fuente.draw(loteSprites, controles, (anchoMundo - diseñoGlifo.width) / 2f, 80);
 
-        batch.end();
+        loteSprites.end();
     }
 
-    public void dibujaHUD() {
-        cam.update();
-        batch.setProjectionMatrix(cam.combined);
-        batch.begin();
-        fuente.draw(batch, "Puntos: " + puntos, 10, 25);
-        fuente.draw(batch, "Vidas : " + vidas, cam.viewportWidth - 240, 25);
-        fuente.draw(batch, "Nivel : " + nivel, cam.viewportWidth/2f - 60, 25);
-        fuente.draw(batch, "Dif   : " + dificultad, cam.viewportWidth/2f + 120, 25);
-        batch.end();
+    // MÉTODO PARA MOSTRAR POR PANTALLA LOS TEXTOS
+    public void dibujarTextos() {
+        fuente.draw(loteSprites, "Puntos: " + puntaje, 10, 25);
+        fuente.draw(loteSprites, "Vidas : " + vidas, camara.viewportWidth - 240, 25);
+        fuente.draw(loteSprites, "Nivel : " + nivel, camara.viewportWidth/2f - 60, 25);
+        fuente.draw(loteSprites, "Dif   : " + dificultad, camara.viewportWidth/2f + 120, 25);
+        
+        if (com.badlogic.gdx.utils.TimeUtils.millis() < mostrarBonificacionVidaHastaMs) {
+            String msg = "¡VIDA EXTRA CONSEGUIDA!";
+            diseñoGlifo.setText(fuente, msg);
+
+            fuente.draw(loteSprites, msg, (camara.viewportWidth - diseñoGlifo.width) / 2f, camara.viewportHeight / 2f); 
+        }
     }
-
-    private void manejarInputMenu() {
-        boolean f1 = Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) || Gdx.input.isKeyJustPressed(Input.Keys.F1);
-        boolean f2 = Gdx.input.isKeyJustPressed(Input.Keys.NUM_2) || Gdx.input.isKeyJustPressed(Input.Keys.F2);
-        boolean f3 = Gdx.input.isKeyJustPressed(Input.Keys.NUM_3) || Gdx.input.isKeyJustPressed(Input.Keys.F3);
-
-        if (f1) {
-            aplicarDificultad(Dificultad.FACIL);
+    
+    // MÉTODO PARA MANEJAR LAS OPCIONES DEL MENÚ
+    private void manejarEntradaMenu() {
+        boolean facil  = Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) || Gdx.input.isKeyJustPressed(Input.Keys.F1);
+        boolean medio= Gdx.input.isKeyJustPressed(Input.Keys.NUM_2) || Gdx.input.isKeyJustPressed(Input.Keys.F2);
+        boolean dificil  = Gdx.input.isKeyJustPressed(Input.Keys.NUM_3) || Gdx.input.isKeyJustPressed(Input.Keys.F3);
+        boolean tutorial = Gdx.input.isKeyJustPressed(Input.Keys.NUM_4) || Gdx.input.isKeyJustPressed(Input.Keys.F4);
+        boolean creditos = Gdx.input.isKeyJustPressed(Input.Keys.NUM_5) || Gdx.input.isKeyJustPressed(Input.Keys.F5);
+            
+        if (facil) {
+            aplicarDificultad(Dificultad.FACIL); 
             iniciarJuego();
-            estado = Estado.JUGANDO;
-        } else if (f2) {
+            estado = EstadoJuego.JUGANDO;
+        } else if (medio) {
             aplicarDificultad(Dificultad.MEDIA);
             iniciarJuego();
-            estado = Estado.JUGANDO;
-        } else if (f3) {
-            aplicarDificultad(Dificultad.DIFICIL);
+            estado = EstadoJuego.JUGANDO;
+        } else if (dificil) {
+            aplicarDificultad(Dificultad.DIFICIL); 
             iniciarJuego();
-            estado = Estado.JUGANDO;
+            estado = EstadoJuego.JUGANDO;
+        } else if (tutorial) {
+        	estado = EstadoJuego.TUTORIAL;
+        } else if (creditos) {
+        	estado = EstadoJuego.CREDITOS;
+        	reiniciarPosicionCreditos();
+        }
+    }
+    
+    // MÉTODO PARA DIBUJAR EL TUTORIAL
+    private void dibujarTutorial() {
+        camara.update();
+        loteSprites.setProjectionMatrix(camara.combined);
+        loteSprites.begin();
+
+        float anchoMundo = camara.viewportWidth;
+        float altoMundo = camara.viewportHeight;
+
+        String titulo = "TUTORIAL DEL JUEGO (" + paginaTutorialActual + " de " + MAX_PAGINAS_TUTORIAL + ")";
+        String pistaNavegacion = "IZQ/DER: Cambiar página | ESC/ENTER: Menú Principal";
+
+        float y = altoMundo - 80; 
+        float interlineado = 44f; 
+        float inicioContenidoX = 80;
+
+        fuente.getData().setScale(3.0f);
+        
+        diseñoGlifo.setText(fuente, titulo);
+        fuente.draw(loteSprites, titulo, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= 70;
+
+        fuente.getData().setScale(1.8f);
+
+        if (paginaTutorialActual == 1) {
+            // PÁGINA 1: OBJETIVO Y REGLAS BÁSICAS
+            String t1 = "OBJETIVO PRINCIPAL:";
+            String c1 = "Destruye TODOS los bloques para pasar de nivel.";
+            String t2 = "VIDAS Y FIN DE JUEGO:";
+            String c2 = "Empiezas con 3 vidas. Si la bola cae, pierdes una. Sin vidas: Fin de Juego.";
+            String t3 = "PROGRESO Y RECOMPENSA:";
+            String c3 = "La velocidad de la bola aumenta ligeramente con cada nivel.";
+            String c4 = "¡Tienes probabilidad de ganar una vida extra al completar un nivel!";
+
+            fuente.draw(loteSprites, t1, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c1, inicioContenidoX + 30, y); y -= interlineado * 1.5f;
+            fuente.draw(loteSprites, t2, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c2, inicioContenidoX + 30, y); y -= interlineado * 1.5f;
+            fuente.draw(loteSprites, t3, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c3, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c4, inicioContenidoX + 30, y); y -= interlineado;
+
+        } else if (paginaTutorialActual == 2) {
+            // PÁGINA 2: DIFICULTADES Y BLOQUES
+            String t1 = "TIPOS DE BLOQUES:";
+            String c1 = "- Normales: Se rompen con 1 golpe.";
+            String c2 = "- Duros (2-3 golpes): Aparecen en MEDIA y DIFÍCIL.";
+            String c3 = "- Irrompibles: No se destruyen. Solo en DIFÍCIL.";
+            String t2 = "AJUSTES POR DIFICULTAD:";
+            String c4 = "- FÁCIL: Pala grande, bola lenta.";
+            String c5 = "- MEDIA/DIFÍCIL: Pala se encoge y la bola acelera progresivamente.";
+            
+            fuente.draw(loteSprites, t1, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c1, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c2, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c3, inicioContenidoX + 30, y); y -= interlineado * 1.5f;
+            fuente.draw(loteSprites, t2, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c4, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c5, inicioContenidoX + 30, y); y -= interlineado;
+
+        } else if (paginaTutorialActual == 3) {
+            // PÁGINA 3: CONTROLES
+            String t1 = "CONTROLES DE JUEGO:";
+            String c1 = "MOVER PALETA: Flechas IZQUIERDA / DERECHA";
+            String c2 = "LANZAR BOLA: ESPACIO";
+            String c3 = "PAUSA / MENÚ: ESCAPE";
+            String t2 = "CONTROLES DE MENÚ (PAUSA/PRINCIPAL):";
+            String c4 = "NAVEGAR: Flechas ARRIBA / ABAJO";
+            String c5 = "SELECCIONAR: ENTER / ESPACIO";
+
+            fuente.draw(loteSprites, t1, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c1, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c2, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c3, inicioContenidoX + 30, y); y -= interlineado * 1.5f;
+            fuente.draw(loteSprites, t2, inicioContenidoX, y); y -= interlineado;
+            fuente.draw(loteSprites, c4, inicioContenidoX + 30, y); y -= interlineado;
+            fuente.draw(loteSprites, c5, inicioContenidoX + 30, y); y -= interlineado;
+        }
+        
+        fuente.getData().setScale(2.5f); 
+        diseñoGlifo.setText(fuente, pistaNavegacion);
+        fuente.draw(loteSprites, pistaNavegacion, (anchoMundo - diseñoGlifo.width) / 2f, 100);
+
+        loteSprites.end();
+    }
+
+    // MÉTODO PARA MANEJAR LAS OPCIONES DEL TUTORIAL
+    private void manejarEntradaTutorial() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            estado = EstadoJuego.MENU; 
+        }
+        
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            paginaTutorialActual = Math.min(paginaTutorialActual + 1, MAX_PAGINAS_TUTORIAL); 
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            paginaTutorialActual = Math.max(paginaTutorialActual - 1, 1); 
+        }
+    }
+    
+    // MÉTODO PARA DIBUJAR LA PANTALLA DE CRÉDITOS
+    private void dibujarPantallaCreditos() {
+    	camara.update();
+        loteSprites.setProjectionMatrix(camara.combined);
+        loteSprites.begin();
+
+        float anchoMundo = camara.viewportWidth;
+
+        desplazamientoCreditosY += velocidadDesplazamientoCreditos * Gdx.graphics.getDeltaTime();
+
+        fuente.getData().setScale(2.0f); 
+        diseñoGlifo.setText(fuente, textoCreditos); 
+
+        fuente.draw(loteSprites, textoCreditos, (anchoMundo - diseñoGlifo.width) / 2f, desplazamientoCreditosY); 
+
+        String pista = "Presiona ENTER o ESC para volver al menú...";
+        fuente.getData().setScale(1.5f);
+        diseñoGlifo.setText(fuente, pista); 
+        fuente.draw(loteSprites, pista, (anchoMundo - diseñoGlifo.width) / 2f, 80);
+
+        loteSprites.end();
+        
+        if (desplazamientoCreditosY > lineaFinCreditos) {
+            reiniciarPosicionCreditos();
         }
     }
 
-    @Override
-    public void render () {
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+    // MÉTODO PARA DIBUJAR LA PANTALLA DE FIN DE JUEGO
+    private void dibujarPantallaFinDeJuego() {
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        renderizadorFormas.setProjectionMatrix(camara.combined);
+        renderizadorFormas.begin(ShapeRenderer.ShapeType.Filled);
+        renderizadorFormas.setColor(0, 0, 0, 0.75f); 
+        renderizadorFormas.rect(0, 0, camara.viewportWidth, camara.viewportHeight);
+        renderizadorFormas.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        if (estado == Estado.MENU) {
-            dibujarMenu();
-            manejarInputMenu();
-            return;
-        }
+        loteSprites.setProjectionMatrix(camara.combined);
+        loteSprites.begin();
 
-        // Toggle pausa desde JUGANDO
-        if (estado == Estado.JUGANDO && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && puedeTogglePausa()) {
-            estado = Estado.PAUSADO;
-            selPausa = 0;
-            acabaDeEntrarPausa = true;
-        }
+        float anchoMundo = camara.viewportWidth;
+        float altoMundo = camara.viewportHeight;
 
-        if (estado == Estado.JUGANDO) {
-            renderFrameJuego(true);
-            return;
-        }
+        fuente.getData().setScale(4.0f); 
 
-        if (estado == Estado.PAUSADO) {
-            renderFrameJuego(false);
-            dibujarOverlayPausa();
-            manejarInputPausa();
-            return;
-        }
+        String titulo = "¡FIN DEL JUEGO! :(";
+        String puntuacion = "Puntuación final: " + puntaje;
+        String pista = "Presiona ENTER para volver al menú...";
+
+        float y = altoMundo / 2f + 100; 
+
+        diseñoGlifo.setText(fuente, titulo);
+        fuente.draw(loteSprites, titulo, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= 80;
+
+        fuente.getData().setScale(2.5f);
+        diseñoGlifo.setText(fuente, puntuacion);
+        fuente.draw(loteSprites, puntuacion, (anchoMundo - diseñoGlifo.width) / 2f, y);
+        y -= 120;
+
+        fuente.getData().setScale(1.5f);
+        diseñoGlifo.setText(fuente, pista);
+        fuente.draw(loteSprites, pista, (anchoMundo - diseñoGlifo.width) / 2f, y);
+
+        loteSprites.end();
     }
+    
+    
+    // MÉTODO PARA RENDERIZAR EL MARCO DEL JUEGO
+    private void renderizarMarcoJuego(boolean actualizando) {
+    	camara.update();
+        
+    	loteSprites.setProjectionMatrix(camara.combined);
+    	loteSprites.begin();
 
-    private void renderFrameJuego(boolean actualizar) {
-        cam.update();
-        sr.setProjectionMatrix(cam.combined);
+    	if (texturaFondo != null) {
+    	    loteSprites.draw(texturaFondo, 0, 0, camara.viewportWidth, camara.viewportHeight);
+    	}
 
-        if (actualizar) plat.actualizar();
+    	if (paleta != null) { 
+    	    paleta.dibujar(loteSprites); 
+    	}
 
-        sr.begin(ShapeRenderer.ShapeType.Filled);
-        plat.dibujar(sr);
+    	dibujarTextos(); 
 
-        if (bola.estaQuieta()) {
-            bola.setXY(plat.getX() + plat.getAncho()/2 - 5, plat.getY() + plat.getAlto() + 11);
-            if (actualizar && Gdx.input.isKeyPressed(Input.Keys.SPACE)) bola.setEstaQuieta(false);
-        } else if (actualizar) {
-            bola.actualizar();
+    	for (Bloque b : bloques) { 
+    	    b.dibujar(loteSprites);
+    	}
+    	
+    	loteSprites.end();
+    	
+    	renderizadorFormas.setProjectionMatrix(camara.combined);
+    	renderizadorFormas.begin(ShapeRenderer.ShapeType.Filled);
+
+    	if (actualizando) paleta.actualizar();
+
+        if (pelota.estaQuieta()) {
+            pelota.setXY(paleta.getX() + paleta.getAncho()/2 - 5, paleta.getY() + paleta.getAlto() + 11);
+            if (actualizando && Gdx.input.isKeyPressed(Input.Keys.SPACE)) pelota.setEstaQuieta(false);
+        } else if (actualizando) {
+            pelota.actualizar();
         }
 
-        if (actualizar && bola.getY() < 0) {
+        if (actualizando && pelota.getY() < 0) {
             vidas--;
-            bola = new BolaPing(
-                plat.getX() + plat.getAncho()/2 - 5,
-                plat.getY() + plat.getAlto() + 11,
-                10,
-                velBolaX,
-                velBolaY,
-                true
-            );
+            pelota = new BolaPing(paleta.getX() + paleta.getAncho()/2 - 5, paleta.getY() + paleta.getAlto() + 11, 10, velocidadXPelotaActual,
+            					  velocidadYPelotaActual, true);
         }
 
-        if (actualizar && vidas <= 0) {
-            estado = Estado.MENU;
+        
+        if (actualizando && vidas <= 0) {
+            estado = EstadoJuego.FIN_DE_JUEGO;
             bloques.clear();
-            sr.end();
+            renderizadorFormas.end();
             return;
         }
 
-        for (Bloque b : bloques) {
-            b.dibujar(sr);
-            if (actualizar) bola.comprobarColision((Colisionable)b);
+        for (Bloque b : bloques) { 
+            if (actualizando) pelota.comprobarColision((Colisionable)b);
         }
 
-        if (actualizar) {
+
+        if (actualizando) {
             for (int i = 0; i < bloques.size(); i++) {
                 Bloque b = bloques.get(i);
                 if (b.estaDestruido()) {
-                    puntos++;
+                    puntaje++;
                     bloques.remove(i);
                     i--;
                 }
             }
         }
 
-        if (actualizar) bola.comprobarColision((Colisionable)plat);
-        bola.dibujar(sr);
+        if (actualizando) pelota.comprobarColision((Colisionable)paleta);
+        pelota.dibujar(renderizadorFormas);
 
-        sr.end();
-        dibujaHUD();
+        renderizadorFormas.end();
 
-        if (actualizar && bloques.size() == 0) {
+        if (actualizando && bloques.size() == 0) {
             nivel++;
-            if (dificultad == Dificultad.MEDIA) {
-                velBolaX += (velBolaX > 0 ? 1 : -1);
-                velBolaY += (velBolaY > 0 ? 1 : -1);
-                int nuevoAncho = Math.max(70, plat.getAncho() - 8);
-                plat = new Plataforma(plat.getX(), plat.getY(), nuevoAncho, plat.getAlto());
-                plat.setVelPxPorSeg(velPlat);
-            } else if (dificultad == Dificultad.DIFICIL) {
-                velBolaX += (velBolaX > 0 ? 1 : -1);
-                velBolaY += (velBolaY > 0 ? 1 : -1);
-                int nuevoAncho = Math.max(60, plat.getAncho() - 12);
-                plat = new Plataforma(plat.getX(), plat.getY(), nuevoAncho, plat.getAlto());
-                plat.setVelPxPorSeg(velPlat);
+            if (dificultad == Dificultad.MEDIA) { 
+                velocidadXPelotaActual += (velocidadXPelotaActual > 0 ? 1 : -1);
+                velocidadYPelotaActual += (velocidadYPelotaActual > 0 ? 1 : -1);
+                int nuevoAncho = Math.max(70, paleta.getAncho() - 8);
+                paleta = new Plataforma(paleta.getX(), paleta.getY(), nuevoAncho, paleta.getAlto(), texturaPaleta);
+                paleta.setVelPxPorSeg(velocidadPaleta);
+            } else if (dificultad == Dificultad.DIFICIL) { 
+                velocidadXPelotaActual += (velocidadXPelotaActual > 0 ? 1 : -1);
+                velocidadYPelotaActual += (velocidadYPelotaActual > 0 ? 1 : -1);
+                int nuevoAncho = Math.max(60, paleta.getAncho() - 12);
+                paleta = new Plataforma(paleta.getX(), paleta.getY(), nuevoAncho, paleta.getAlto(), texturaPaleta); 
+                paleta.setVelPxPorSeg(velocidadPaleta);
             }
-
-            crearBloques(calcularFilasNivel(nivel));
-            bola = new BolaPing(
-                plat.getX() + plat.getAncho()/2 - 5,
-                plat.getY() + plat.getAlto() + 11,
+            
+            double probVidaExtra = 0.0;
+            
+            switch (dificultad) {
+                case FACIL: 
+                    probVidaExtra = 0.25;
+                    break;
+                case MEDIA: 
+                    probVidaExtra = 0.50;
+                    break;
+                case DIFICIL: 
+                    probVidaExtra = 1.0;
+                    break;
+            }
+            if (Math.random() < probVidaExtra) {
+                vidas++;
+                mostrarBonificacionVidaHastaMs = com.badlogic.gdx.utils.TimeUtils.millis() + duracionBonificacionVida;
+            }
+            
+            crearBloques(filasParaNivel(nivel));
+            pelota = new BolaPing( 
+                paleta.getX() + paleta.getAncho()/2 - 5,
+                paleta.getY() + paleta.getAlto() + 11,
                 10,
-                velBolaX,
-                velBolaY,
+                velocidadXPelotaActual,
+                velocidadYPelotaActual,
                 true
             );
         }
     }
 
-    private void dibujarOverlayPausa() {
+    
+    // MÉTODO PARA DIBUJAR LA SUPERPOSICIÓN DE PAUSA Y EL MENÚ
+    private void dibujarSuperposicionPausaYMenu() {
         Gdx.gl.glEnable(GL20.GL_BLEND);
-        sr.setProjectionMatrix(cam.combined);
-        sr.begin(ShapeRenderer.ShapeType.Filled);
-        sr.setColor(0, 0, 0, 0.55f);
-        sr.rect(0, 0, cam.viewportWidth, cam.viewportHeight);
-        sr.end();
+        renderizadorFormas.setProjectionMatrix(camara.combined);
+        renderizadorFormas.begin(ShapeRenderer.ShapeType.Filled);
+        renderizadorFormas.setColor(0, 0, 0, 0.55f);
+        renderizadorFormas.rect(0, 0, camara.viewportWidth, camara.viewportHeight);
+        renderizadorFormas.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        batch.setProjectionMatrix(cam.combined);
-        batch.begin();
-        float w = cam.viewportWidth;
-        float h = cam.viewportHeight;
+        loteSprites.setProjectionMatrix(camara.combined);
+        loteSprites.begin();
+        float ancho = camara.viewportWidth;
+        float alto = camara.viewportHeight;
 
         String titulo = "PAUSA";
-        gl.setText(fuente, titulo);
-        fuente.draw(batch, titulo, (w - gl.width) / 2f, h - 120);
+        diseñoGlifo.setText(fuente, titulo);
+        fuente.draw(loteSprites, titulo, (ancho - diseñoGlifo.width) / 2f, alto - 120);
 
-        float y = h - 200;
-        float linea = 44f;
+        float y = alto - 200;
+        float interlineado = 44f;
         for (int i = 0; i < opcionesPausa.length; i++) {
-            String pref = (i == selPausa) ? "> " : "  ";
-            String txt = pref + opcionesPausa[i];
-            gl.setText(fuente, txt);
-            fuente.draw(batch, txt, (w - gl.width) / 2f, y);
-            y -= linea;
+            String prefijo = (i == opcionPausaSeleccionada) ? "> " : "  ";
+            String texto = prefijo + opcionesPausa[i];
+            diseñoGlifo.setText(fuente, texto);
+            fuente.draw(loteSprites, texto, (ancho - diseñoGlifo.width) / 2f, y);
+            y -= interlineado;
         }
 
-        String pista = "ESC: Reanudar  |  ENTER: Aceptar  |  UP/DOWN: Navegar";
-        gl.setText(fuente, pista);
-        fuente.draw(batch, pista, (w - gl.width) / 2f, 120);
+        String pista = "ESC: Reanudar  |  ENTER: Aceptar  |  ARRIBA/ABAJO: Navegar";
+        diseñoGlifo.setText(fuente, pista);
+        fuente.draw(loteSprites, pista, (ancho - diseñoGlifo.width) / 2f, 120);
 
-        batch.end();
+        loteSprites.end();
     }
 
-    private void manejarInputPausa() {
-        if (acabaDeEntrarPausa) {
-            acabaDeEntrarPausa = false;
+    // MÉTODO PARA MANEJAR LA ENTRADA DE PAUSA
+    private void manejarEntradaPausa() {
+        if (recienEntradoEnPausa) {
+            // consume the ESC that triggered pause
+            recienEntradoEnPausa = false;
             return;
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && puedeTogglePausa()) {
-            estado = Estado.JUGANDO;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && puedeCambiarPausa()) {
+            estado = EstadoJuego.JUGANDO;
             return;
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            selPausa = (selPausa - 1 + opcionesPausa.length) % opcionesPausa.length;
+            opcionPausaSeleccionada = (opcionPausaSeleccionada - 1 + opcionesPausa.length) % opcionesPausa.length;
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            selPausa = (selPausa + 1) % opcionesPausa.length;
+            opcionPausaSeleccionada = (opcionPausaSeleccionada + 1) % opcionesPausa.length;
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            switch (selPausa) {
+            switch (opcionPausaSeleccionada) {
                 case 0:
-                    estado = Estado.JUGANDO;
+                    estado = EstadoJuego.JUGANDO;
                     break;
                 case 1:
-                    crearBloques(calcularFilasNivel(nivel));
-                    bola = new BolaPing(
-                        plat.getX() + plat.getAncho()/2 - 5,
-                        plat.getY() + plat.getAlto() + 11,
-                        10,
-                        velBolaX,
-                        velBolaY,
-                        true
-                    );
-                    estado = Estado.JUGANDO;
+                	crearBloques(filasParaNivel(nivel));
+                    pelota = new BolaPing(paleta.getX() + paleta.getAncho()/2 - 5, paleta.getY() + paleta.getAlto() + 11, 10,
+                    					velocidadXPelotaActual, velocidadYPelotaActual, true); 
+                    paleta = new Plataforma(paleta.getX(), paleta.getY(), paleta.getAncho(), paleta.getAlto(), texturaPaleta); 
+                    paleta.setVelPxPorSeg(velocidadPaleta);
+                    estado = EstadoJuego.JUGANDO;
                     break;
                 case 2:
-                    estado = Estado.MENU;
+                    estado = EstadoJuego.MENU;
                     bloques.clear();
                     break;
                 case 3:
@@ -505,16 +776,60 @@ public class Main extends ApplicationAdapter {
     }
 
     @Override
-    public void resize(int w, int h) {
-        cam.setToOrtho(false, w, h);
-        cam.update();
+    public void render () {
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        switch (estado) {
+            case MENU:
+                dibujarMenu();
+                manejarEntradaMenu();
+                break;
+            case JUGANDO:
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && puedeCambiarPausa()) {
+                    estado = EstadoJuego.PAUSADO;
+                    recienEntradoEnPausa = true;
+                }
+                renderizarMarcoJuego(true); 
+                break;
+            case PAUSADO:
+                renderizarMarcoJuego(false); 
+                dibujarSuperposicionPausaYMenu();
+                manejarEntradaPausa();
+                break;
+            case TUTORIAL:
+            	dibujarTutorial();
+            	manejarEntradaTutorial();
+            	break;
+            case CREDITOS:
+            	dibujarPantallaCreditos();
+            	if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            		estado = EstadoJuego.MENU;
+            	}
+            	break;
+            case FIN_DE_JUEGO:
+                dibujarPantallaFinDeJuego();
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                    estado = EstadoJuego.MENU;
+                    puntaje = 0;
+                    vidas = 3;
+                    nivel = 1;
+                    bloques.clear();
+                    aplicarDificultad(dificultad); 
+                }
+                break;
+        }
     }
 
     @Override
     public void dispose () {
-        // TODO: liberar recursos reales cuando lo desees
-        // batch.dispose();
-        // sr.dispose();
-        // fuente.dispose();
+        loteSprites.dispose();
+        fuente.dispose();
+        renderizadorFormas.dispose();
+        texturaFondo.dispose();
+        texturaPaleta.dispose();
+        texturaAsteroideNormal.dispose();
+        texturaAsteroideDuro2.dispose();
+        texturaAsteroideDuro3.dispose();
+        texturaAsteroideIrrompible.dispose();
     }
 }
