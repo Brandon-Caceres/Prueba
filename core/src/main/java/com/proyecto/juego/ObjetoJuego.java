@@ -2,6 +2,8 @@ package com.proyecto.juego;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+
+// Ayua
 public abstract class ObjetoJuego {
     protected int x;
     protected int y;

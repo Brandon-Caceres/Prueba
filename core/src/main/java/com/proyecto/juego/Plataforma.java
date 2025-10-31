@@ -55,7 +55,7 @@ public class Plataforma extends ObjetoJuego implements Colisionable {
     }
 
     /**
-     * Devuelve el rectángulo de colisión de la plataforma.
+     * Devuelve el rectángulo de colisión de la plataforma
      * @return Objeto Rectangle con la posición y dimensiones.
      */
     @Override

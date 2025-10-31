@@ -67,7 +67,7 @@ public class Main extends ApplicationAdapter {
     private int velocidadYPelotaActual = 7;
     private float velocidadPaleta = 200f;
 
-    // VALORES PREDETERMINADOS DEL TAMAÑO DEL BLOQUE (MEDIO/DIFÍCIL)
+    // VALORES PREDETERMINADOS DEL TAMAÑO DEL BLOQUE (MEDIO/DIFICIL)
     private int anchoBloque = 70;
     private int altoBloque = 26;
     private int espaciadoHBloque = 10;

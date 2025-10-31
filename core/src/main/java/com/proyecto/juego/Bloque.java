@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import java.util.Random;
 
+// Hay que solucionar esto
 public class Bloque extends ObjetoJuego implements Colisionable {
     private boolean destruido;
     private boolean irrompible;

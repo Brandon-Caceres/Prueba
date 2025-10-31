@@ -22,7 +22,7 @@ public class Lwjgl3Launcher {
     }
 
     /**
-     * Define y devuelve la configuración por defecto para la aplicación de escritorio.
+     * Define y devuelve la configuración por defecto para la aplicación de escritorio
      * @return La configuración de la aplicación Lwjgl3.
      */
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
